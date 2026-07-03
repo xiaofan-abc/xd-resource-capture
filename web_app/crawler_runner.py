@@ -19,14 +19,14 @@ def truthy(value: Any) -> bool:
 
 
 def build_login_args(root_dir: Path, payload: dict[str, Any]) -> list[str]:
-    script = root_dir / "web_app" / "login_runner.py"
     args = [
         sys.executable,
-        str(script),
+        "-m",
+        "web_app.login_runner",
         "--login-url",
         payload["login_url"],
         "--profile",
-        payload.get("profile") or ".browser-profile",
+        payload.get("profile") or ".xidian-profile",
         "--channel",
         payload.get("channel") or "auto",
     ]

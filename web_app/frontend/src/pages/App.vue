@@ -1,22 +1,51 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
-import { postJson } from "../api";
+import { computed, nextTick, ref, watch } from "vue";
+import { loadCachedLoginStatus, storeCachedLoginStatus } from "../authCache";
+import { ApiError, authErrorLabel, authStatusLabel, postJson } from "../api";
+import { readResourceBootstrap } from "../bootstrapState";
 import NumberField from "../components/NumberField.vue";
 import TaskLog from "../components/TaskLog.vue";
+import { loadPageCache, storePageCache } from "../pageCache";
+import { restartBackendAndWait } from "../restart";
 import { createLog, summarizeTask, taskName } from "../taskLog";
-import type { Chapter, Course, Resource, TaskLogEntry, TaskRecord, Term } from "../types";
+import type { AuthStatusResponse, Chapter, Course, Resource, TaskLogEntry, TaskRecord, Term } from "../types";
 
-const profile = ref(".xidian-profile");
-const channel = ref("auto");
+type ResourcePageCache = {
+  profile: string;
+  channel: string;
+  loginStatus: string;
+  selectedTerm: string;
+  extractForm: {
+    mode: string;
+    metadata_concurrency: number;
+  };
+  downloadForm: {
+    out: string;
+    concurrency: number;
+  };
+};
+
+const PAGE_CACHE_KEY = "resource-page";
+const bootstrap = readResourceBootstrap();
+const cachedPage = loadPageCache<ResourcePageCache>(PAGE_CACHE_KEY);
+
+const profile = ref(cachedPage?.profile || ".xidian-profile");
+const channel = ref(cachedPage?.channel || "auto");
 const showLoginPanel = ref(false);
 const showSettingsPanel = ref(false);
-const loginStatus = ref("未验证");
+const loginStatus = ref(
+  bootstrap?.auth
+    ? authStatusLabel(bootstrap.auth)
+    : loadCachedLoginStatus(cachedPage?.profile || ".xidian-profile", cachedPage?.loginStatus || "未验证"),
+);
 const checkingAuthStatus = ref(false);
+const loggingOut = ref(false);
+const restartingBackend = ref(false);
 const loginTaskId = ref("");
 const loadingTerms = ref(false);
-const terms = ref<Term[]>([]);
-const selectedTerm = ref("");
-const courses = ref<Course[]>([]);
+const terms = ref<Term[]>(bootstrap?.page?.terms || []);
+const selectedTerm = ref(bootstrap?.page?.selectedTerm || cachedPage?.selectedTerm || "");
+const courses = ref<Course[]>(bootstrap?.page?.courses || []);
 const courseSearch = ref("");
 const selectedCourse = ref<Course | null>(null);
 const chapters = ref<Chapter[]>([]);
@@ -30,27 +59,29 @@ const activeTask = ref<TaskRecord | null>(null);
 const taskLogs = ref<TaskLogEntry[]>([]);
 const rawLogCount = ref(0);
 const eventSource = ref<EventSource | null>(null);
+let loginStatusPollHandle: number | null = null;
+let loginBootstrapLoaded = false;
 
 const loginForm = ref({
   login_url: "https://ids.xidian.edu.cn/authserver/login?service=https://xdspoc.fanya.chaoxing.com/sso/xdspoc",
-  profile: ".xidian-profile",
-  channel: "auto",
+  profile: profile.value,
+  channel: channel.value,
   username: "",
   password: "",
   headless: false,
 });
 
 const extractForm = ref({
-  mode: "all",
-  metadata_concurrency: 24,
+  mode: cachedPage?.extractForm?.mode || "all",
+  metadata_concurrency: cachedPage?.extractForm?.metadata_concurrency ?? 24,
 });
 
 const downloadForm = ref({
-  out: "downloaded_xidian",
-  concurrency: 4,
+  out: cachedPage?.downloadForm?.out || "downloaded_xidian",
+  concurrency: cachedPage?.downloadForm?.concurrency ?? 4,
 });
 
-const isRunning = computed(() => activeTask.value && ["queued", "running"].includes(activeTask.value.status));
+const isRunning = computed(() => Boolean(activeTask.value && ["queued", "running"].includes(activeTask.value.status)));
 const selectedChapters = computed(() => {
   const selected = new Set(selectedChapterIds.value);
   return chapters.value.filter((chapter) => selected.has(chapter.chapter_id));
@@ -76,12 +107,68 @@ const chapterEmptyText = computed(() => {
   if (loadingChapters.value) return "正在读取章节...";
   if (chapters.value.length > 0 && filteredChapters.value.length === 0) return "没有匹配的章节。";
   if (!selectedCourse.value) return "选择课程后显示章节。";
-  if (chaptersLoaded.value) return "该课程没有可解析的章节。";
+  if (chaptersLoaded.value) return "这门课程没有可解析的章节。";
   return "选择课程后显示章节。";
 });
 
 function normalizeSearch(value: string) {
   return value.trim().toLowerCase();
+}
+
+function syncLoginSettings() {
+  loginForm.value.profile = profile.value;
+  loginForm.value.channel = channel.value;
+}
+
+function persistPageCache() {
+  storePageCache<ResourcePageCache>(PAGE_CACHE_KEY, {
+    profile: profile.value,
+    channel: channel.value,
+    loginStatus: loginStatus.value,
+    selectedTerm: selectedTerm.value,
+    extractForm: { ...extractForm.value },
+    downloadForm: { ...downloadForm.value },
+  });
+  storeCachedLoginStatus(profile.value, loginStatus.value);
+  document.cookie = `xidian_profile=${encodeURIComponent(profile.value)}; path=/; max-age=31536000`;
+}
+
+function resetCourseSelection() {
+  courses.value = [];
+  courseSearch.value = "";
+  selectedCourse.value = null;
+  chapters.value = [];
+  chapterSearch.value = "";
+  chaptersLoaded.value = false;
+  selectedChapterIds.value = [];
+  extractedResources.value = [];
+  selectedResourceUrls.value = [];
+}
+
+function clearAuthBoundData() {
+  terms.value = [];
+  selectedTerm.value = "";
+  resetCourseSelection();
+}
+
+function setLoginStatus(value: string) {
+  loginStatus.value = value;
+  storeCachedLoginStatus(profile.value, value);
+}
+
+function keepLoggedInLabel() {
+  if (!loginStatus.value.startsWith("已登录")) {
+    setLoginStatus("已登录");
+  }
+}
+
+function applyAuthFailure(error: unknown) {
+  if (!(error instanceof ApiError)) return;
+  if (error.code === "missing_auth_state" || error.code === "expired_auth_state") {
+    loginBootstrapLoaded = false;
+    setLoginStatus(authErrorLabel(error));
+    clearAuthBoundData();
+  }
 }
 
 function toggleLoginPanel() {
@@ -108,42 +195,122 @@ async function postOrLog<T>(url: string, body: unknown): Promise<T> {
   }
 }
 
-function syncLoginSettings() {
-  loginForm.value.profile = profile.value;
-  loginForm.value.channel = channel.value;
+function stopLoginStatusPolling() {
+  if (loginStatusPollHandle !== null) {
+    window.clearInterval(loginStatusPollHandle);
+    loginStatusPollHandle = null;
+  }
 }
 
-async function refreshLoginStatus() {
+async function warmReplayBootstrapCache() {
+  try {
+    await postJson("/api/replay/courses", {
+      profile: profile.value,
+      channel: channel.value,
+      semester_id: null,
+    });
+  } catch (error) {
+    applyAuthFailure(error);
+    addTaskLog("鍥炴斁棰勭儹澶辫触", error instanceof Error ? error.message : String(error), "error");
+  }
+}
+
+async function syncAfterLoginSuccess() {
+  await loadTerms().catch(() => undefined);
+  await warmReplayBootstrapCache();
+  addTaskLog("鐧诲綍瀹屾垚", "宸茶嚜鍔ㄨ鍙栬祫婧愯绋嬪拰鍥炴斁瀛︽湡缂撳瓨銆?");
+}
+
+async function refreshLoginStatus(preservePending = false): Promise<boolean> {
   checkingAuthStatus.value = true;
   try {
-    const data = await postJson<{ terms: Term[]; selected?: Term }>("/api/xidian/terms", {
+    const data = await postJson<AuthStatusResponse>("/api/auth/status", {
       profile: profile.value,
       channel: channel.value,
     });
-    terms.value = data.terms || [];
-    const selected = data.selected || terms.value.find((term) => term.selected);
-    selectedTerm.value = selected ? selected.value : "";
-    loginStatus.value = "已登录";
-  } catch {
-    loginStatus.value = "未登录";
+    if (!data.authenticated && preservePending && loginTaskId.value) {
+      setLoginStatus("登录中");
+      return false;
+    }
+    setLoginStatus(authStatusLabel(data));
+    return data.authenticated;
+  } catch (error) {
+    if (preservePending && loginTaskId.value && error instanceof ApiError && error.code === "missing_auth_state") {
+      setLoginStatus("鐧诲綍涓?");
+      return false;
+    }
+    setLoginStatus(authErrorLabel(error));
+    if (error instanceof ApiError && (error.code === "missing_auth_state" || error.code === "expired_auth_state")) {
+      loginBootstrapLoaded = false;
+      clearAuthBoundData();
+    }
+    return false;
   } finally {
     checkingAuthStatus.value = false;
   }
 }
 
+async function ensureAuthenticatedData(preservePending = false): Promise<boolean> {
+  const authenticated = await refreshLoginStatus(preservePending);
+  if (authenticated && !loginBootstrapLoaded) {
+    loginBootstrapLoaded = true;
+    await syncAfterLoginSuccess();
+    stopLoginStatusPolling();
+  }
+  return authenticated;
+}
+
+function startLoginStatusPolling() {
+  stopLoginStatusPolling();
+  void ensureAuthenticatedData(true);
+  loginStatusPollHandle = window.setInterval(() => {
+    void ensureAuthenticatedData(true);
+  }, 3000);
+}
+
+async function initializePage() {
+  syncLoginSettings();
+  persistPageCache();
+}
+
 async function startManualLogin() {
   syncLoginSettings();
+  loginBootstrapLoaded = false;
   const task = await postOrLog<TaskRecord>("/api/auth/open-login", loginForm.value);
   loginTaskId.value = task.id;
-  loginStatus.value = "登录中";
-  attachTask(task);
+  startLoginStatusPolling();
+  setLoginStatus("登录中");
+  attachTask(task, async () => {
+    stopLoginStatusPolling();
+    loginTaskId.value = "";
+    await ensureAuthenticatedData();
+  });
 }
 
 async function releaseLogin() {
+  stopLoginStatusPolling();
   if (!loginTaskId.value) return;
   await postOrLog<TaskRecord>(`/api/tasks/${loginTaskId.value}/cancel`, {});
   loginTaskId.value = "";
-  await refreshLoginStatus();
+  await ensureAuthenticatedData();
+}
+
+async function logout() {
+  if (loggingOut.value) return;
+  loggingOut.value = true;
+  stopLoginStatusPolling();
+  try {
+    await postOrLog<{ status: string; message: string }>("/api/auth/logout", {
+      profile: profile.value,
+    });
+    loginTaskId.value = "";
+    loginBootstrapLoaded = false;
+    clearAuthBoundData();
+    setLoginStatus("未找到登录态");
+    addTaskLog("已退出登录", `已清除 ${profile.value} 的本地登录态。`);
+  } finally {
+    loggingOut.value = false;
+  }
 }
 
 async function loadTerms() {
@@ -154,10 +321,13 @@ async function loadTerms() {
       channel: channel.value,
     });
     terms.value = data.terms || [];
-    loginStatus.value = "已登录";
+    keepLoggedInLabel();
     const selected = data.selected || terms.value.find((term) => term.selected);
     selectedTerm.value = selected ? selected.value : "";
     if (selectedTerm.value) await loadCourses();
+  } catch (error) {
+    applyAuthFailure(error);
+    throw error;
   } finally {
     loadingTerms.value = false;
   }
@@ -166,24 +336,22 @@ async function loadTerms() {
 async function loadCourses() {
   if (!selectedTerm.value) return;
   const selected = terms.value.find((term) => term.value === selectedTerm.value);
-  courses.value = [];
-  courseSearch.value = "";
-  selectedCourse.value = null;
-  chapters.value = [];
-  chapterSearch.value = "";
-  chaptersLoaded.value = false;
-  selectedChapterIds.value = [];
-  extractedResources.value = [];
-  selectedResourceUrls.value = [];
+  resetCourseSelection();
 
-  const data = await postOrLog<{ courses: Course[]; terms?: Term[] }>("/api/xidian/courses", {
-    profile: profile.value,
-    channel: channel.value,
-    term: selectedTerm.value,
-    term_label: selected ? selected.label : "",
-  });
-  courses.value = data.courses || [];
-  if (data.terms?.length) terms.value = data.terms;
+  try {
+    const data = await postOrLog<{ courses: Course[]; terms?: Term[] }>("/api/xidian/courses", {
+      profile: profile.value,
+      channel: channel.value,
+      term: selectedTerm.value,
+      term_label: selected ? selected.label : "",
+    });
+    courses.value = data.courses || [];
+    if (data.terms?.length) terms.value = data.terms;
+    keepLoggedInLabel();
+  } catch (error) {
+    applyAuthFailure(error);
+    throw error;
+  }
 }
 
 async function selectCourse(course: Course) {
@@ -195,6 +363,7 @@ async function selectCourse(course: Course) {
   selectedChapterIds.value = [];
   extractedResources.value = [];
   selectedResourceUrls.value = [];
+
   try {
     const data = await postOrLog<{ chapters: Chapter[] }>("/api/xidian/chapters", {
       profile: profile.value,
@@ -203,6 +372,10 @@ async function selectCourse(course: Course) {
     });
     chapters.value = data.chapters || [];
     chaptersLoaded.value = true;
+    keepLoggedInLabel();
+  } catch (error) {
+    applyAuthFailure(error);
+    throw error;
   } finally {
     loadingChapters.value = false;
   }
@@ -244,7 +417,27 @@ async function startDownload() {
   attachTask(task);
 }
 
-function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void) | null = null) {
+async function restartBackend() {
+  if (restartingBackend.value) return;
+  restartingBackend.value = true;
+  showLoginPanel.value = false;
+  showSettingsPanel.value = false;
+  persistPageCache();
+  eventSource.value?.close();
+  eventSource.value = null;
+  addTaskLog("后端重启中", "正在保存缓存并等待服务恢复。");
+
+  try {
+    await restartBackendAndWait(persistPageCache);
+    window.location.reload();
+  } catch (error) {
+    addTaskLog("后端重启失败", error instanceof Error ? error.message : String(error), "error");
+  } finally {
+    restartingBackend.value = false;
+  }
+}
+
+function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void | Promise<void>) | null = null) {
   eventSource.value?.close();
   activeTask.value = task;
   taskLogs.value = [];
@@ -264,12 +457,8 @@ function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void) | nul
     activeTask.value = { ...(activeTask.value as TaskRecord), ...payload.data };
 
     if (payload.data.status === "running" && previous !== "running") addTaskLog("任务开始运行");
-    if (payload.data.status === "done") {
-      addTaskLog("任务完成", "结果已同步到页面。");
-    }
-    if (payload.data.status === "failed") {
-      addTaskLog("任务失败", "请检查登录状态、网络或选择内容后重试。", "error");
-    }
+    if (payload.data.status === "done") addTaskLog("任务完成", "结果已同步到页面。");
+    if (payload.data.status === "failed") addTaskLog("任务失败", "请检查登录状态、网络或所选内容后重试。", "error");
     if (payload.data.status === "cancelled") addTaskLog("任务已取消");
   });
 
@@ -277,7 +466,7 @@ function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void) | nul
     const payload = JSON.parse((event as MessageEvent).data) as { data: { level?: string } };
     rawLogCount.value += 1;
     if (payload.data.level === "error") {
-      addTaskLog("运行时出现错误", "后台输出已折叠，页面仅保留关键状态。", "error");
+      addTaskLog("运行时出现错误", "后台输出已折叠，页面仅保留关键信息。", "error");
     } else if (rawLogCount.value === 1 || rawLogCount.value % 12 === 0) {
       addTaskLog("处理中", `已收到 ${rawLogCount.value} 条后台进度。`);
     }
@@ -290,7 +479,10 @@ function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void) | nul
 
   source.addEventListener("done", (event) => {
     source.close();
-    if (onDone) onDone(JSON.parse((event as MessageEvent).data) as TaskRecord);
+    eventSource.value = null;
+    if (onDone) {
+      void onDone(JSON.parse((event as MessageEvent).data) as TaskRecord);
+    }
   });
 }
 
@@ -299,7 +491,33 @@ async function cancelActiveTask() {
   activeTask.value = await postOrLog<TaskRecord>(`/api/tasks/${activeTask.value.id}/cancel`, {});
 }
 
-void refreshLoginStatus();
+watch(profile, (value, previous) => {
+  syncLoginSettings();
+  if (value !== previous) {
+    setLoginStatus(loadCachedLoginStatus(value, "未验证"));
+  }
+});
+
+watch(channel, () => {
+  syncLoginSettings();
+});
+
+watch(
+  () => ({
+    profile: profile.value,
+    channel: channel.value,
+    loginStatus: loginStatus.value,
+    selectedTerm: selectedTerm.value,
+    extractForm: { ...extractForm.value },
+    downloadForm: { ...downloadForm.value },
+  }),
+  () => {
+    persistPageCache();
+  },
+  { deep: true, immediate: true },
+);
+
+void initializePage();
 </script>
 
 <template>
@@ -313,20 +531,23 @@ void refreshLoginStatus();
           </nav>
           <div class="menu-group">
             <button class="btn" type="button" @click="toggleLoginPanel">
-              {{ loginStatus === "已登录" ? "已登录" : "登录" }}
+              {{ loginStatus.startsWith("已登录") ? "已登录" : "登录" }}
             </button>
             <button class="btn" type="button" @click="toggleSettingsPanel">全局参数</button>
 
-            <section v-if="showLoginPanel" class="floating-panel top-panel">
+            <section v-if="showLoginPanel" class="floating-panel top-panel login-panel">
               <div class="section-head">
                 <h2 class="eyebrow">登录</h2>
                 <span class="status-pill">{{ loginStatus }}</span>
               </div>
-              <div class="button-row">
+              <div class="button-row login-actions">
                 <button class="btn primary" type="button" @click="startManualLogin">打开登录</button>
                 <button class="btn" type="button" @click="releaseLogin">释放窗口</button>
-                <button class="btn" type="button" :disabled="checkingAuthStatus" @click="refreshLoginStatus">
+                <button class="btn" type="button" :disabled="checkingAuthStatus" @click="() => ensureAuthenticatedData()">
                   {{ checkingAuthStatus ? "检查中" : "检查状态" }}
+                </button>
+                <button class="btn" type="button" :disabled="loggingOut" @click="logout">
+                  {{ loggingOut ? "退出中" : "退出登录" }}
                 </button>
               </div>
             </section>
@@ -351,7 +572,7 @@ void refreshLoginStatus();
                   <span>提取类型</span>
                   <select v-model="extractForm.mode" name="mode">
                     <option value="all">全部</option>
-                    <option value="pdf">PDF/DOCX</option>
+                    <option value="pdf">PDF / 文档</option>
                     <option value="video">视频</option>
                   </select>
                 </label>
@@ -360,10 +581,16 @@ void refreshLoginStatus();
                 <NumberField v-model="extractForm.metadata_concurrency" label="解析并发" />
                 <NumberField v-model="downloadForm.concurrency" label="下载并发" :max="16" />
               </div>
-              <label class="field" style="margin-bottom: 0">
+              <label class="field">
                 <span>输出目录</span>
                 <input v-model.trim="downloadForm.out" name="out" autocomplete="off" />
               </label>
+              <div class="button-row">
+                <button class="btn" type="button" :disabled="restartingBackend || isRunning" @click="restartBackend">
+                  {{ restartingBackend ? "重启中" : "重启后端" }}
+                </button>
+              </div>
+              <p class="panel-note">重启会保存最近缓存，并在服务恢复后自动刷新页面。</p>
             </section>
           </div>
         </div>
@@ -383,7 +610,9 @@ void refreshLoginStatus();
               <span class="step">1</span>
               <h2>学期</h2>
             </div>
-            <button class="btn primary" type="button" :disabled="loadingTerms" @click="loadTerms">{{ loadingTerms ? "读取中…" : "读取" }}</button>
+            <button class="btn primary" type="button" :disabled="loadingTerms" @click="loadTerms">
+              {{ loadingTerms ? "读取中..." : "读取" }}
+            </button>
           </div>
           <label>
             <span class="visually-hidden">选择学期</span>

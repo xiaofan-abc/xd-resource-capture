@@ -270,6 +270,16 @@ label {
   gap: 0.5rem;
 }
 
+.login-actions {
+  flex-wrap: nowrap;
+}
+
+.login-actions .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .btn {
   min-height: 2.5rem;
   border: 1px solid var(--line-strong);
@@ -307,6 +317,13 @@ label {
 
 .field {
   margin-bottom: 0.8rem;
+}
+
+.panel-note {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
 }
 
 .field span {
@@ -359,6 +376,10 @@ label {
 }
 
 .floating-panel.wide {
+  width: min(92vw, 34rem);
+}
+
+.login-panel {
   width: min(92vw, 34rem);
 }
 
@@ -672,6 +693,14 @@ label {
 
   .topbar h1 {
     font-size: 2.2rem;
+  }
+
+  .login-actions {
+    flex-wrap: wrap;
+  }
+
+  .login-actions .btn {
+    flex-basis: calc(50% - 0.25rem);
   }
 }
 

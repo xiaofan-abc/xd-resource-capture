@@ -1,0 +1,243 @@
+INFO:     127.0.0.1:8370 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45710 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45711 - "POST /api/system/restart HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45713 - "GET /api/system/status?_=1783071857938 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60718 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60719 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60720 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55226 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55231 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55232 - "POST /api/system/restart HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55239 - "GET /api/system/status?_=1783071919217 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3579 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3580 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3581 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56844 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56844 - "GET /static/assets/index-Bojmcllz.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52365 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43262 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57620 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32760 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32761 - "POST /api/system/restart HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64533 - "GET /api/system/status?_=1783072006838 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31935 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65230 - "POST /api/auth/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65230 - "POST /api/auth/open-login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65230 - "GET /api/tasks/bb5c5df03bef/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65230 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:64189 - "POST /api/xidian/terms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET /static/assets/replay-mOQkB-QU.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35401 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63815 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:16823 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64189 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET /static/assets/index-Bojmcllz.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64189 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/replay/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/terms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64189 - "POST /api/xidian/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/xidian/extract_links HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET /api/tasks/c01a1413d899/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/replay/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/replay/videos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9268 - "POST /api/replay/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9268 - "POST /api/replay/videos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/xidian/terms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/xidian/terms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48746 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1428 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1428 - "GET /static/assets/index-Bojmcllz.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:7119 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:41318 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:21644 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47464 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47464 - "GET /static/assets/replay-mOQkB-QU.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/replay/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/terms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/replay/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/replay/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "POST /api/xidian/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41318 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20093 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20093 - "GET /static/assets/replay-mOQkB-QU.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61463 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:31499 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:15930 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:15930 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:15930 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:15930 - "GET /static/assets/index-Bojmcllz.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:25069 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:25070 - "POST /api/system/restart HTTP/1.1" 200 OK
+INFO:     127.0.0.1:25072 - "GET /api/system/status?_=1783072725644 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:25078 - "POST /api/auth/logout HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:25101 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61446 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61446 - "GET /static/assets/index-CRk6gzUl.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58298 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:25453 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20825 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20825 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20825 - "POST /api/auth/open-login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20825 - "GET /api/tasks/fd677ad45af0/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:20825 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:61419 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61419 - "GET /static/assets/index-CRk6gzUl.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64968 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55460 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:1739 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:1739 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:26252 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:26252 - "GET /static/assets/index-CRk6gzUl.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:37300 - "GET /static/assets/styles-3gIvYrS3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:30461 - "GET /static/assets/styles-By6eiL6F.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63880 - "GET /static/assets/taskLog-DBwDRMf8.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63880 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "POST /api/auth/open-login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "GET /api/tasks/bc42c207af1f/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63880 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:34707 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34707 - "GET /static/assets/replay-Bq6xyeUc.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34707 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:43692 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:29176 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:23500 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:11330 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:4196 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4196 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:51582 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:45350 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:28765 - "POST /api/xidian/terms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45350 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45350 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:28765 - "POST /api/replay/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:28765 - "POST /api/replay/courses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:28765 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:28765 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:28765 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51091 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51091 - "GET /static/assets/index-C2tD_hOR.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45843 - "GET /static/assets/styles-CRhZE3bh.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40055 - "GET /static/assets/styles-vLQyy3A-.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59686 - "GET /static/assets/taskLog-B5kRvrkU.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12332 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12332 - "GET /static/assets/index-C2tD_hOR.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:47473 - "GET /static/assets/styles-CRhZE3bh.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:33697 - "GET /static/assets/styles-vLQyy3A-.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:18503 - "GET /static/assets/taskLog-B5kRvrkU.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:22815 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:22815 - "GET /static/assets/index-8BEfyZXa.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:16401 - "GET /static/assets/taskLog-BgNFPvsb.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56990 - "GET /static/assets/styles-vLQyy3A-.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64940 - "GET /static/assets/styles-CRhZE3bh.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64940 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64940 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64940 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64940 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64940 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:13185 - "POST /api/auth/logout HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:18530 - "POST /api/auth/logout HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:14912 - "POST /api/auth/logout HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:4253 - "POST /api/auth/logout HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:62619 - "POST /api/auth/logout HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:5083 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5083 - "GET /static/assets/index-8BEfyZXa.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54874 - "GET /static/assets/styles-CRhZE3bh.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:46259 - "GET /static/assets/taskLog-BgNFPvsb.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:4780 - "GET /static/assets/styles-vLQyy3A-.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:4780 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4780 - "POST /api/auth/logout HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:46259 - "POST /api/auth/open-login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46259 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54874 - "GET /api/tasks/099d079846ef/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33114 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54874 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:63219 - "POST /api/auth/open-login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63219 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:35015 - "GET /api/tasks/078982af951e/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:22231 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:35015 - "POST /api/auth/status HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:30666 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:30666 - "GET /static/assets/index-8BEfyZXa.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:17948 - "GET /static/assets/styles-CRhZE3bh.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:28207 - "GET /static/assets/taskLog-BgNFPvsb.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:40285 - "GET /static/assets/styles-vLQyy3A-.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:40285 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40285 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40285 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5987 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5987 - "GET /static/assets/index-8BEfyZXa.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:28017 - "GET /static/assets/styles-CRhZE3bh.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:28017 - "GET /static/assets/taskLog-BgNFPvsb.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:5987 - "GET /static/assets/styles-vLQyy3A-.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:5987 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65323 - "GET /api/system/status?_=1783077795167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65323 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65323 - "POST /api/xidian/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65323 - "POST /api/xidian/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65323 - "POST /api/xidian/extract_links HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65323 - "GET /api/tasks/70ef2776842d/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43864 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43864 - "GET /static/assets/replay-ujGkgS_3.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:43864 - "POST /api/replay/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43864 - "POST /api/replay/videos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64140 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64140 - "GET /replay HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64140 - "GET / HTTP/1.1" 200 OK

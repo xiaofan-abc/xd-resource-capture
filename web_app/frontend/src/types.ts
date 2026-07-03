@@ -19,6 +19,57 @@ export interface Term {
   selected?: boolean;
 }
 
+export interface AuthStatusResponse {
+  authenticated: boolean;
+  status: "authenticated" | "missing" | "expired" | string;
+  message: string;
+  url?: string;
+  storage_state?: {
+    path: string;
+    exists: boolean;
+    updated_at?: string;
+    size?: number;
+  };
+  profile?: {
+    status?: "occupied" | "available" | string;
+    message?: string;
+    session?: {
+      path?: string;
+      pid?: number;
+      started_at?: string;
+      storage_state_path?: string;
+      channel?: string;
+    } | null;
+  };
+}
+
+export interface SystemTaskRef {
+  id: string;
+  kind: string;
+  status: TaskStatus;
+}
+
+export interface SystemStatusResponse {
+  pid: number;
+  started_at: string;
+  host: string;
+  port: number;
+  active_tasks: SystemTaskRef[];
+  active_task_count: number;
+  cache: {
+    profiles: string[];
+    count: number;
+    updated_at?: string | null;
+    path?: string | null;
+  };
+}
+
+export interface RestartResponse extends SystemStatusResponse {
+  status: "restarting" | string;
+  message: string;
+  helper_pid: number;
+}
+
 export interface Course {
   name: string;
   href: string;
