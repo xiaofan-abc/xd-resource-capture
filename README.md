@@ -26,6 +26,8 @@ web_app/
   frontend/              Vue + Vite 前端源码
   static/                已构建的前端静态文件，后端直接服务这里
 requirements.txt         Python 依赖
+install_requirements.bat Windows 一键安装依赖并启动
+start_project.bat        Windows 仅启动后端
 README.md                项目说明
 ```
 
@@ -37,6 +39,11 @@ README.md                项目说明
 - 本机可打开 Chrome、Edge 或 Playwright Chromium
 
 ## 安装
+
+Windows 下可以直接双击：
+
+- `install_requirements.bat`：安装 Python 依赖、安装 Playwright Chromium，并在完成后直接启动项目。
+- `start_project.bat`：仅启动项目，适合依赖已经安装好的情况。
 
 安装 Python 依赖：
 
@@ -57,6 +64,8 @@ npm run build
 
 ## 运行
 
+Windows 下如已安装依赖，直接双击 `start_project.bat` 即可。
+
 在项目根目录启动后端：
 
 ```bash
@@ -67,6 +76,9 @@ python -m uvicorn web_app.app:app --host 127.0.0.1 --port 8000
 
 - 课程资源：http://127.0.0.1:8000/
 - 课程回放：http://127.0.0.1:8000/replay
+
+**关闭后端：**
+在运行该命令的终端（命令行窗口）中，按下 `Ctrl + C` 即可停止后端服务。
 
 ## 使用流程
 
