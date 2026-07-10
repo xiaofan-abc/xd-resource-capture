@@ -257,7 +257,12 @@ class ReplayVideosRequest(BaseModel):
 
 @app.get("/")
 async def index(request: Request) -> HTMLResponse:
-    return render_bootstrap_page("index.html", ui_state_cache.resource_bootstrap(profile_from_request(request)))
+    return render_bootstrap_page("index.html", ui_state_cache.home_bootstrap(profile_from_request(request)))
+
+
+@app.get("/resources")
+async def resources_page(request: Request) -> HTMLResponse:
+    return render_bootstrap_page("resources.html", ui_state_cache.resource_bootstrap(profile_from_request(request)))
 
 
 @app.get("/replay")

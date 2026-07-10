@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from "vue";
 import { loadCachedLoginStatus, storeCachedLoginStatus } from "../authCache";
 import { ApiError, authErrorLabel, authStatusLabel, postJson } from "../api";
 import { readResourceBootstrap } from "../bootstrapState";
+import FixedHeaderControls from "../components/FixedHeaderControls.vue";
 import NumberField from "../components/NumberField.vue";
 import TaskLog from "../components/TaskLog.vue";
 import { loadPageCache, storePageCache } from "../pageCache";
@@ -31,13 +32,13 @@ const cachedPage = loadPageCache<ResourcePageCache>(PAGE_CACHE_KEY);
 
 const profile = ref(cachedPage?.profile || ".xidian-profile");
 const channel = ref(cachedPage?.channel || "auto");
-const showLoginPanel = ref(false);
 const showSettingsPanel = ref(false);
 const loginStatus = ref(
   bootstrap?.auth
     ? authStatusLabel(bootstrap.auth)
     : loadCachedLoginStatus(cachedPage?.profile || ".xidian-profile", cachedPage?.loginStatus || "未验证"),
 );
+const loginUserName = ref(bootstrap?.auth?.user?.name || "");
 const checkingAuthStatus = ref(false);
 const loggingOut = ref(false);
 const restartingBackend = ref(false);
@@ -57,6 +58,7 @@ const extractedResources = ref<Resource[]>([]);
 const selectedResourceUrls = ref<string[]>([]);
 const activeTask = ref<TaskRecord | null>(null);
 const taskLogs = ref<TaskLogEntry[]>([]);
+const showTaskDrawer = ref(false);
 const rawLogCount = ref(0);
 const eventSource = ref<EventSource | null>(null);
 let loginStatusPollHandle: number | null = null;
@@ -91,6 +93,7 @@ const selectedResources = computed(() => {
   return extractedResources.value.filter((resource) => selected.has(resource.url));
 });
 const taskSummary = computed(() => summarizeTask(activeTask.value));
+const selectedCourseTitle = computed(() => selectedCourse.value?.name || "未选择课程");
 const filteredCourses = computed(() => {
   const keyword = normalizeSearch(courseSearch.value);
   if (!keyword) return courses.value;
@@ -156,6 +159,10 @@ function setLoginStatus(value: string) {
   storeCachedLoginStatus(profile.value, value);
 }
 
+function applyAuthIdentity(data: AuthStatusResponse) {
+  loginUserName.value = data.authenticated ? data.user?.name || "" : "";
+}
+
 function keepLoggedInLabel() {
   if (!loginStatus.value.startsWith("已登录")) {
     setLoginStatus("已登录");
@@ -166,19 +173,14 @@ function applyAuthFailure(error: unknown) {
   if (!(error instanceof ApiError)) return;
   if (error.code === "missing_auth_state" || error.code === "expired_auth_state") {
     loginBootstrapLoaded = false;
+    loginUserName.value = "";
     setLoginStatus(authErrorLabel(error));
     clearAuthBoundData();
   }
 }
 
-function toggleLoginPanel() {
-  showLoginPanel.value = !showLoginPanel.value;
-  if (showLoginPanel.value) showSettingsPanel.value = false;
-}
-
 function toggleSettingsPanel() {
   showSettingsPanel.value = !showSettingsPanel.value;
-  if (showSettingsPanel.value) showLoginPanel.value = false;
 }
 
 function addTaskLog(title: string, detail = "", level: TaskLogEntry["level"] = "info") {
@@ -211,14 +213,14 @@ async function warmReplayBootstrapCache() {
     });
   } catch (error) {
     applyAuthFailure(error);
-    addTaskLog("鍥炴斁棰勭儹澶辫触", error instanceof Error ? error.message : String(error), "error");
+    addTaskLog("回放预热失败", error instanceof Error ? error.message : String(error), "error");
   }
 }
 
 async function syncAfterLoginSuccess() {
   await loadTerms().catch(() => undefined);
   await warmReplayBootstrapCache();
-  addTaskLog("鐧诲綍瀹屾垚", "宸茶嚜鍔ㄨ鍙栬祫婧愯绋嬪拰鍥炴斁瀛︽湡缂撳瓨銆?");
+  addTaskLog("登录完成", "已自动读取资源课程，并同步回放学期缓存。");
 }
 
 async function refreshLoginStatus(preservePending = false): Promise<boolean> {
@@ -228,6 +230,7 @@ async function refreshLoginStatus(preservePending = false): Promise<boolean> {
       profile: profile.value,
       channel: channel.value,
     });
+    applyAuthIdentity(data);
     if (!data.authenticated && preservePending && loginTaskId.value) {
       setLoginStatus("登录中");
       return false;
@@ -236,12 +239,13 @@ async function refreshLoginStatus(preservePending = false): Promise<boolean> {
     return data.authenticated;
   } catch (error) {
     if (preservePending && loginTaskId.value && error instanceof ApiError && error.code === "missing_auth_state") {
-      setLoginStatus("鐧诲綍涓?");
+      setLoginStatus("登录中");
       return false;
     }
     setLoginStatus(authErrorLabel(error));
     if (error instanceof ApiError && (error.code === "missing_auth_state" || error.code === "expired_auth_state")) {
       loginBootstrapLoaded = false;
+      loginUserName.value = "";
       clearAuthBoundData();
     }
     return false;
@@ -305,9 +309,10 @@ async function logout() {
     });
     loginTaskId.value = "";
     loginBootstrapLoaded = false;
+    loginUserName.value = "";
     clearAuthBoundData();
     setLoginStatus("未找到登录态");
-    addTaskLog("已退出登录", `已清除 ${profile.value} 的本地登录态。`);
+    addTaskLog("已退出登录", "已清除本地登录态。");
   } finally {
     loggingOut.value = false;
   }
@@ -420,7 +425,6 @@ async function startDownload() {
 async function restartBackend() {
   if (restartingBackend.value) return;
   restartingBackend.value = true;
-  showLoginPanel.value = false;
   showSettingsPanel.value = false;
   persistPageCache();
   eventSource.value?.close();
@@ -441,6 +445,7 @@ function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void | Prom
   eventSource.value?.close();
   activeTask.value = task;
   taskLogs.value = [];
+  showTaskDrawer.value = true;
   rawLogCount.value = 0;
   addTaskLog("任务已创建", `${taskName(task.kind)} 已提交。`);
 
@@ -521,211 +526,178 @@ void initializePage();
 </script>
 
 <template>
-  <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <div class="top-actions">
-          <nav class="nav-links" aria-label="页面导航">
-            <a class="btn primary" href="/">课程资源</a>
-            <a class="btn" href="/replay">课程回放</a>
-          </nav>
-          <div class="menu-group">
-            <button class="btn" type="button" @click="toggleLoginPanel">
-              {{ loginStatus.startsWith("已登录") ? "已登录" : "登录" }}
-            </button>
-            <button class="btn" type="button" @click="toggleSettingsPanel">全局参数</button>
+  <div class="workbench-shell">
+    <FixedHeaderControls
+      active-page="resources"
+      :login-status="loginStatus"
+      :checking="checkingAuthStatus"
+      :logging-out="loggingOut"
+      :settings-open="showSettingsPanel"
+      @login="startManualLogin"
+      @check="ensureAuthenticatedData"
+      @release="releaseLogin"
+      @logout="logout"
+      @settings="toggleSettingsPanel"
+    />
 
-            <section v-if="showLoginPanel" class="floating-panel top-panel login-panel">
-              <div class="section-head">
-                <h2 class="eyebrow">登录</h2>
-                <span class="status-pill">{{ loginStatus }}</span>
-              </div>
-              <div class="button-row login-actions">
-                <button class="btn primary" type="button" @click="startManualLogin">打开登录</button>
-                <button class="btn" type="button" @click="releaseLogin">释放窗口</button>
-                <button class="btn" type="button" :disabled="checkingAuthStatus" @click="() => ensureAuthenticatedData()">
-                  {{ checkingAuthStatus ? "检查中" : "检查状态" }}
-                </button>
-                <button class="btn" type="button" :disabled="loggingOut" @click="logout">
-                  {{ loggingOut ? "退出中" : "退出登录" }}
-                </button>
-              </div>
-            </section>
-
-            <section v-if="showSettingsPanel" class="floating-panel top-panel wide">
-              <h2 class="eyebrow" style="margin-bottom: 1rem">全局参数</h2>
-              <label class="field">
-                <span>Profile</span>
-                <input v-model.trim="profile" name="profile" autocomplete="off" />
-              </label>
-              <div class="field-grid">
-                <label class="field">
-                  <span>浏览器</span>
-                  <select v-model="channel" name="channel">
-                    <option value="auto">auto</option>
-                    <option value="msedge">Edge</option>
-                    <option value="chrome">Chrome</option>
-                    <option value="chromium">Chromium</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span>提取类型</span>
-                  <select v-model="extractForm.mode" name="mode">
-                    <option value="all">全部</option>
-                    <option value="pdf">PDF / 文档</option>
-                    <option value="video">视频</option>
-                  </select>
-                </label>
-              </div>
-              <div class="field-grid">
-                <NumberField v-model="extractForm.metadata_concurrency" label="解析并发" />
-                <NumberField v-model="downloadForm.concurrency" label="下载并发" :max="16" />
-              </div>
-              <label class="field">
-                <span>输出目录</span>
-                <input v-model.trim="downloadForm.out" name="out" autocomplete="off" />
-              </label>
-              <div class="button-row">
-                <button class="btn" type="button" :disabled="restartingBackend || isRunning" @click="restartBackend">
-                  {{ restartingBackend ? "重启中" : "重启后端" }}
-                </button>
-              </div>
-              <p class="panel-note">重启会保存最近缓存，并在服务恢复后自动刷新页面。</p>
-            </section>
-          </div>
+    <main id="main" class="workbench-main">
+      <header class="workbench-toolbar">
+        <div>
+          <p class="eyebrow">资料</p>
+          <h1>课程资源</h1>
         </div>
-        <h1>西电课程资源抓取</h1>
-        <p>选择学期、课程和章节，解析课件或视频资源，再下载到本地目录。</p>
-      </div>
-      <nav class="nav-links" aria-label="状态">
-        <span class="status-pill">{{ loginStatus }}</span>
-      </nav>
-    </header>
+        <div class="toolbar-controls">
+          <select v-model="selectedTerm" name="term" @change="loadCourses">
+            <option value="">选择学期</option>
+            <option v-for="term in terms" :key="term.value" :value="term.value">{{ term.label }}</option>
+          </select>
+          <button class="btn primary" type="button" :disabled="loadingTerms" @click="loadTerms">
+            {{ loadingTerms ? "读取中" : "读取" }}
+          </button>
+        </div>
+      </header>
 
-    <main id="main" class="page-grid">
-      <section class="content-stack">
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">1</span>
-              <h2>学期</h2>
-            </div>
-            <button class="btn primary" type="button" :disabled="loadingTerms" @click="loadTerms">
-              {{ loadingTerms ? "读取中..." : "读取" }}
-            </button>
+      <section class="workbench-board">
+        <section class="course-browser" aria-label="课程列表">
+          <div class="pane-heading">
+            <strong>课程</strong>
+            <span>{{ filteredCourses.length }} / {{ courses.length }}</span>
           </div>
-          <label>
-            <span class="visually-hidden">选择学期</span>
-            <select v-model="selectedTerm" name="term" @change="loadCourses">
-              <option value="">请选择学期</option>
-              <option v-for="term in terms" :key="term.value" :value="term.value">{{ term.label }}</option>
-            </select>
+          <label class="search-line">
+            <span class="visually-hidden">搜索课程</span>
+            <input v-model.trim="courseSearch" name="course_search" placeholder="搜索课程、老师或课号" autocomplete="off" />
           </label>
-        </section>
-
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">2</span>
-              <h2>课程</h2>
-            </div>
-            <span class="empty">{{ filteredCourses.length }} / {{ courses.length }} 门</span>
-          </div>
-          <label class="field">
-            <span>搜索课程</span>
-            <input v-model.trim="courseSearch" name="course_search" placeholder="课程名、老师或课号" autocomplete="off" />
-          </label>
-          <div class="list-box">
+          <div class="plain-list">
             <button
               v-for="course in filteredCourses"
               :key="course.href"
-              class="list-button"
+              class="plain-row"
               :class="{ active: selectedCourse?.href === course.href }"
               type="button"
               @click="selectCourse(course)"
             >
-              <span class="item-name">{{ course.name }}</span>
-              <span class="item-meta">{{ course.code || "无课程号" }} / {{ course.teacher || "未知教师" }} / {{ course.clazz || "未知班级" }}</span>
+              <strong>{{ course.name }}</strong>
+              <span>{{ course.code || "无课程号" }} / {{ course.teacher || "未知教师" }}</span>
+              <small>{{ course.clazz || "未知班级" }}</small>
             </button>
-            <div v-if="courses.length === 0" class="empty" style="padding: 0.75rem">选择学期后显示课程。</div>
-            <div v-else-if="filteredCourses.length === 0" class="empty" style="padding: 0.75rem">没有匹配的课程。</div>
+            <div v-if="courses.length === 0" class="empty-line">选择学期后显示课程。</div>
+            <div v-else-if="filteredCourses.length === 0" class="empty-line">没有匹配的课程。</div>
           </div>
         </section>
 
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">3</span>
-              <div>
-                <h2>章节</h2>
-                <p>{{ selectedCourse ? selectedCourse.name : "先选择课程" }}</p>
-              </div>
+        <section class="content-pane" aria-label="当前课程">
+          <div class="detail-title">
+            <div>
+              <span>当前课程</span>
+              <h2>{{ selectedCourseTitle }}</h2>
             </div>
-            <div class="button-row">
-              <button class="btn" type="button" :disabled="loadingChapters || filteredChapters.length === 0" @click="toggleAllChapters(true)">全选</button>
+            <div class="detail-actions">
+              <button class="btn" type="button" :disabled="loadingChapters || filteredChapters.length === 0" @click="toggleAllChapters(true)">全选章节</button>
               <button class="btn" type="button" :disabled="loadingChapters || selectedChapterIds.length === 0" @click="toggleAllChapters(false)">清空</button>
-              <button class="btn primary" type="button" :disabled="selectedChapters.length === 0" @click="startExtractLinks">解析链接</button>
+              <button class="btn primary" type="button" :disabled="selectedChapters.length === 0" @click="startExtractLinks">解析</button>
             </div>
           </div>
-          <label class="field">
-            <span>搜索章节</span>
-            <input v-model.trim="chapterSearch" name="chapter_search" placeholder="章节名或章节 ID" autocomplete="off" />
-          </label>
-          <div class="check-grid">
-            <label v-for="chapter in filteredChapters" :key="chapter.chapter_id" class="check-card">
-              <input v-model="selectedChapterIds" :value="chapter.chapter_id" type="checkbox" />
-              <span class="check-card-text">
-                <strong>{{ chapter.title }}</strong>
-                <small>{{ chapter.chapter_id }}</small>
-              </span>
-            </label>
-            <div v-if="chapters.length === 0 || filteredChapters.length === 0" class="empty">{{ chapterEmptyText }}</div>
-          </div>
-        </section>
 
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">4</span>
-              <div>
-                <h2>资源链接</h2>
-                <p>解析完成后选择要下载的资源。</p>
+          <div class="split-content">
+            <section class="tree-pane" aria-label="章节">
+              <div class="pane-heading">
+                <strong>章节</strong>
+                <span>已选 {{ selectedChapters.length }}</span>
               </div>
-            </div>
-            <div class="button-row">
-              <button class="btn" type="button" @click="toggleAllResources(true)">全选</button>
-              <button class="btn" type="button" @click="toggleAllResources(false)">清空</button>
-              <button class="btn primary" type="button" :disabled="selectedResources.length === 0" @click="startDownload">下载选中</button>
-            </div>
-          </div>
-          <div class="check-grid">
-            <label v-for="resource in extractedResources" :key="resource.url" class="check-card">
-              <input v-model="selectedResourceUrls" :value="resource.url" type="checkbox" />
-              <span class="check-card-text">
-                <strong>{{ resource.attachment_name }}</strong>
-                <small>{{ resource.chapter }} / {{ resource.kind.toUpperCase() }}</small>
-              </span>
-            </label>
-            <div v-if="extractedResources.length === 0" class="empty">解析完成后显示可用资源。</div>
-          </div>
-        </section>
+              <label class="search-line">
+                <span class="visually-hidden">搜索章节</span>
+                <input v-model.trim="chapterSearch" name="chapter_search" placeholder="搜索章节" autocomplete="off" />
+              </label>
+              <div class="tree-list">
+                <label v-for="chapter in filteredChapters" :key="chapter.chapter_id" class="tree-row">
+                  <input v-model="selectedChapterIds" :value="chapter.chapter_id" type="checkbox" />
+                  <span>
+                    <strong>{{ chapter.title }}</strong>
+                    <small>{{ chapter.chapter_id }}</small>
+                  </span>
+                </label>
+                <div v-if="chapters.length === 0 || filteredChapters.length === 0" class="empty-line">{{ chapterEmptyText }}</div>
+              </div>
+            </section>
 
-        <section class="panel task-panel">
-          <div class="pad">
-            <div class="section-head">
-              <div class="section-title">
-                <span class="step">5</span>
-                <div>
-                  <h2>任务日志</h2>
-                  <p>{{ taskSummary }}</p>
-                </div>
+            <section class="file-pane" aria-label="资源">
+              <div class="pane-heading">
+                <strong>资源</strong>
+                <span>已选 {{ selectedResources.length }}</span>
               </div>
-              <button class="btn" type="button" :disabled="!activeTask || !isRunning" @click="cancelActiveTask">取消</button>
-            </div>
-            <TaskLog :logs="taskLogs" />
+              <div class="file-list-plain">
+                <label v-for="resource in extractedResources" :key="resource.url" class="file-row">
+                  <input v-model="selectedResourceUrls" :value="resource.url" type="checkbox" />
+                  <span>
+                    <strong>{{ resource.attachment_name }}</strong>
+                    <small>{{ resource.chapter }} / {{ resource.kind.toUpperCase() }}</small>
+                  </span>
+                </label>
+                <div v-if="extractedResources.length === 0" class="empty-line">解析后显示资源。</div>
+              </div>
+            </section>
           </div>
         </section>
       </section>
     </main>
+
+    <aside v-if="showSettingsPanel" class="workspace-drawer">
+      <div class="drawer-title">
+        <strong>参数</strong>
+        <button type="button" @click="toggleSettingsPanel">关闭</button>
+      </div>
+      <label class="field">
+        <span>Profile</span>
+        <input v-model.trim="profile" name="profile" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>浏览器</span>
+        <select v-model="channel" name="channel">
+          <option value="auto">auto</option>
+          <option value="msedge">Edge</option>
+          <option value="chrome">Chrome</option>
+          <option value="chromium">Chromium</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>提取类型</span>
+        <select v-model="extractForm.mode" name="mode">
+          <option value="all">全部</option>
+          <option value="pdf">PDF / 文档</option>
+          <option value="video">视频</option>
+        </select>
+      </label>
+      <NumberField v-model="extractForm.metadata_concurrency" label="解析并发" />
+      <NumberField v-model="downloadForm.concurrency" label="下载并发" :max="16" />
+      <label class="field">
+        <span>输出目录</span>
+        <input v-model.trim="downloadForm.out" name="out" autocomplete="off" />
+      </label>
+      <button class="btn" type="button" :disabled="restartingBackend || isRunning" @click="restartBackend">
+        {{ restartingBackend ? "重启中" : "重启后端" }}
+      </button>
+    </aside>
+
+    <footer class="download-rail">
+      <div>
+        <strong>已选 {{ selectedChapters.length }} 个章节 · {{ selectedResources.length }} 个资源</strong>
+        <span>{{ taskSummary }}</span>
+      </div>
+      <div class="download-actions">
+        <button class="btn" type="button" @click="showTaskDrawer = !showTaskDrawer">日志</button>
+        <button class="btn" type="button" :disabled="extractedResources.length === 0" @click="toggleAllResources(true)">全选资源</button>
+        <button class="btn" type="button" :disabled="selectedResourceUrls.length === 0" @click="toggleAllResources(false)">清空资源</button>
+        <button class="btn primary" type="button" :disabled="selectedResources.length === 0" @click="startDownload">下载</button>
+      </div>
+    </footer>
+
+    <section v-if="showTaskDrawer" class="task-drawer">
+      <div class="drawer-title">
+        <strong>任务日志</strong>
+        <button type="button" @click="showTaskDrawer = false">收起</button>
+      </div>
+      <button class="btn" type="button" :disabled="!activeTask || !isRunning" @click="cancelActiveTask">取消任务</button>
+      <TaskLog :logs="taskLogs" />
+    </section>
   </div>
 </template>

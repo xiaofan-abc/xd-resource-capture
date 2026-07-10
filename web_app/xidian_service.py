@@ -27,6 +27,10 @@ REPLAY_VIEW_HOST = "http://newes.chaoxing.com"
 MOOC1 = "https://mooc1.chaoxing.com"
 MOOC2 = "https://mooc2-ans.chaoxing.com"
 XIDIAN_LOGIN_URL = "https://ids.xidian.edu.cn/authserver/login?service=https://xdspoc.fanya.chaoxing.com/sso/xdspoc"
+IDENTITY_URLS = (
+    "https://i.chaoxing.com/",
+    "https://i.chaoxing.com/space/index",
+)
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 STORAGE_STATE_FILENAME = "storage_state.json"
 LOGIN_SESSION_FILENAME = "login_session.json"
@@ -224,6 +228,83 @@ def looks_like_login_page(html_text: str, final_url: str, soup: BeautifulSoup | 
     return bool(soup.select_one('input[name="username"], input[name="password"], input[type="password"]'))
 
 
+def clean_identity_text(value: str) -> str:
+    text = re.sub(r"\s+", " ", value).strip()
+    text = re.sub(r"^(欢迎|您好|你好)[，,:：\s]*", "", text)
+    for marker in (" Account", " Invitation", " Organization", " Exit"):
+        marker_index = text.find(marker)
+        if marker_index > 0:
+            text = text[:marker_index].strip()
+    text = text.strip(" -_｜|")
+    if not text or len(text) > 40:
+        return ""
+    if re.fullmatch(r"[\d@._+\-\s]{4,}", text):
+        return ""
+    if any(marker in text for marker in ("登录", "退出", "课程", "消息", "首页", "设置")):
+        return ""
+    return text
+
+
+def extract_user_info(html_text: str, soup: BeautifulSoup | None = None) -> dict[str, str]:
+    soup = soup or page_soup(html_text)
+    selectors = [
+        ".personalName",
+        ".personal-name",
+        ".accountName",
+        ".account-name",
+        "#space_nickname",
+        "#userName",
+        "#username",
+        "#realName",
+        "#realname",
+        ".userName",
+        ".username",
+        ".realName",
+        ".realname",
+        ".user-name",
+        ".person-name",
+        ".avatar-name",
+        "[data-user-name]",
+    ]
+
+    user: dict[str, str] = {}
+    for selector in selectors:
+        element = soup.select_one(selector)
+        if not element:
+            continue
+        raw_name = element.get("data-user-name") or element.get("title") or element.get_text(" ", strip=True)
+        name = clean_identity_text(str(raw_name or ""))
+        if name:
+            user["name"] = name
+            user["source"] = "page"
+            break
+
+    if "name" not in user:
+        for key in ("realName", "realname", "userName", "username", "nickName", "nickname", "uname"):
+            name = clean_identity_text(script_value(html_text, key))
+            if name:
+                user["name"] = name
+                user["source"] = "script"
+                break
+
+    user_id = script_value(html_text, "userId") or script_value(html_text, "uid") or script_value(html_text, "_uid")
+    if user_id:
+        user["id"] = user_id
+    return user
+
+
+async def fetch_user_info(auth_state: dict[str, Any]) -> dict[str, str]:
+    for url in IDENTITY_URLS:
+        try:
+            html_text, _ = await fetch_text(url, auth_state)
+        except Exception:
+            continue
+        user = extract_user_info(html_text)
+        if user.get("name"):
+            return user
+    return {}
+
+
 def ensure_course_list_page(root_dir: Path, profile: str, html_text: str, final_url: str) -> BeautifulSoup:
     soup = page_soup(html_text)
     if soup.select_one("#yearList, .myde_course_item"):
@@ -370,6 +451,7 @@ def build_auth_status_response(
     profile: str,
     session: dict[str, Any] | None,
     url: str | None = None,
+    user: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "authenticated": authenticated,
@@ -384,6 +466,8 @@ def build_auth_status_response(
     }
     if url:
         payload["url"] = url
+    if user:
+        payload["user"] = user
     return payload
 
 
@@ -392,7 +476,10 @@ async def check_auth_status(root_dir: Path, *, profile: str, channel: str = "aut
     try:
         auth_state = await get_auth_state(root_dir, profile, channel)
         course_html, course_url = await fetch_text(COURSE_LIST_URL, auth_state)
-        ensure_course_list_page(root_dir, profile, course_html, course_url)
+        course_soup = ensure_course_list_page(root_dir, profile, course_html, course_url)
+        user = extract_user_info(course_html, course_soup)
+        if not user.get("name"):
+            user = {**user, **await fetch_user_info(auth_state)}
     except AuthStateError as exc:
         message = exc.message
         if exc.status == "missing" and session:
@@ -418,6 +505,7 @@ async def check_auth_status(root_dir: Path, *, profile: str, channel: str = "aut
         profile=profile,
         session=session,
         url=course_url,
+        user=user,
     )
 
 

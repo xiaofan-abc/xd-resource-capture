@@ -76,14 +76,23 @@ class UiStateCache:
         self._set_section(profile, "auth", payload)
 
     def set_authenticated(self, profile: str, *, message: str = "已找到可用登录态。") -> None:
-        self.set_auth(
-            profile,
-            {
-                "authenticated": True,
-                "status": "authenticated",
-                "message": message,
-            },
-        )
+        state = self._profile_state(profile)
+        auth = state.get("auth") if isinstance(state.get("auth"), dict) else {}
+        payload = {
+            "authenticated": True,
+            "status": "authenticated",
+            "message": message,
+        }
+        if isinstance(auth.get("user"), dict):
+            payload["user"] = deepcopy(auth["user"])
+        self.set_auth(profile, payload)
+
+    def home_bootstrap(self, profile: str) -> dict[str, Any]:
+        state = self._profiles.get(profile, {})
+        return {
+            "auth": deepcopy(state.get("auth")),
+            "updated_at": state.get("updated_at"),
+        }
 
     def set_xidian_terms(self, profile: str, payload: dict[str, Any]) -> None:
         self._set_section(profile, "xidian_terms", payload)

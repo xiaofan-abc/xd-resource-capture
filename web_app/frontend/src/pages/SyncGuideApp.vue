@@ -3,7 +3,8 @@
     <header class="topbar">
       <div>
         <nav class="nav-links" aria-label="页面导航">
-          <a class="btn" href="/">课程资源</a>
+          <a class="btn" href="/">首页</a>
+          <a class="btn" href="/resources">课程资源</a>
           <a class="btn" href="/replay">课程回放</a>
         </nav>
         <h1>如何同步课件与课堂</h1>

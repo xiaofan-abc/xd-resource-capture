@@ -24,6 +24,11 @@ export interface AuthStatusResponse {
   status: "authenticated" | "missing" | "expired" | string;
   message: string;
   url?: string;
+  user?: {
+    name?: string;
+    id?: string;
+    source?: string;
+  };
   storage_state?: {
     path: string;
     exists: boolean;

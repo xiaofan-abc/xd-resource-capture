@@ -1,5 +1,10 @@
 import type { AuthStatusResponse, Course, ReplayCourse, Term } from "./types";
 
+export type HomeBootstrap = {
+  auth?: AuthStatusResponse;
+  updated_at?: string;
+};
+
 export type ResourceBootstrap = {
   auth?: AuthStatusResponse;
   page?: {
@@ -27,6 +32,10 @@ function readBootstrap<T>(): T | undefined {
 
 export function readResourceBootstrap(): ResourceBootstrap | undefined {
   return readBootstrap<ResourceBootstrap>();
+}
+
+export function readHomeBootstrap(): HomeBootstrap | undefined {
+  return readBootstrap<HomeBootstrap>();
 }
 
 export function readReplayBootstrap(): ReplayBootstrap | undefined {

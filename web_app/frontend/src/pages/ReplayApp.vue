@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { loadCachedLoginStatus, storeCachedLoginStatus } from "../authCache";
 import { ApiError, authErrorLabel, authStatusLabel, postJson } from "../api";
 import { readReplayBootstrap } from "../bootstrapState";
+import FixedHeaderControls from "../components/FixedHeaderControls.vue";
 import NumberField from "../components/NumberField.vue";
 import TaskLog from "../components/TaskLog.vue";
 import { loadPageCache, storePageCache } from "../pageCache";
@@ -28,13 +29,13 @@ const cachedPage = loadPageCache<ReplayPageCache>(PAGE_CACHE_KEY);
 
 const profile = ref(cachedPage?.profile || ".xidian-profile");
 const channel = ref(cachedPage?.channel || "auto");
-const showLoginPanel = ref(false);
 const showSettingsPanel = ref(false);
 const loginStatus = ref(
   bootstrap?.auth
     ? authStatusLabel(bootstrap.auth)
     : loadCachedLoginStatus(cachedPage?.profile || ".xidian-profile", cachedPage?.loginStatus || "未验证"),
 );
+const loginUserName = ref(bootstrap?.auth?.user?.name || "");
 const checkingAuthStatus = ref(false);
 const loggingOut = ref(false);
 const restartingBackend = ref(false);
@@ -53,6 +54,7 @@ const selectedResourceUrls = ref<string[]>([]);
 const activeTask = ref<TaskRecord | null>(null);
 const eventSource = ref<EventSource | null>(null);
 const taskLogs = ref<TaskLogEntry[]>([]);
+const showTaskDrawer = ref(false);
 const rawLogCount = ref(0);
 let loginStatusPollHandle: number | null = null;
 let loginBootstrapLoaded = false;
@@ -91,6 +93,7 @@ const filteredCourses = computed(() => {
   );
 });
 const taskSummary = computed(() => summarizeTask(activeTask.value));
+const selectedCourseTitle = computed(() => selectedCourse.value?.course_name || "未选择课程");
 
 function normalizeSearch(value: string) {
   return value.trim().toLowerCase();
@@ -133,6 +136,10 @@ function setLoginStatus(value: string) {
   storeCachedLoginStatus(profile.value, value);
 }
 
+function applyAuthIdentity(data: AuthStatusResponse) {
+  loginUserName.value = data.authenticated ? data.user?.name || "" : "";
+}
+
 function keepLoggedInLabel() {
   if (!loginStatus.value.startsWith("已登录")) {
     setLoginStatus("已登录");
@@ -143,19 +150,14 @@ function applyAuthFailure(error: unknown) {
   if (!(error instanceof ApiError)) return;
   if (error.code === "missing_auth_state" || error.code === "expired_auth_state") {
     loginBootstrapLoaded = false;
+    loginUserName.value = "";
     setLoginStatus(authErrorLabel(error));
     clearAuthBoundData();
   }
 }
 
-function toggleLoginPanel() {
-  showLoginPanel.value = !showLoginPanel.value;
-  if (showLoginPanel.value) showSettingsPanel.value = false;
-}
-
 function toggleSettingsPanel() {
   showSettingsPanel.value = !showSettingsPanel.value;
-  if (showSettingsPanel.value) showLoginPanel.value = false;
 }
 
 function addTaskLog(title: string, detail = "", level: TaskLogEntry["level"] = "info") {
@@ -195,14 +197,14 @@ async function warmResourceBootstrapCache() {
     }
   } catch (error) {
     applyAuthFailure(error);
-    addTaskLog("璧勬簮棰勭儹澶辫触", error instanceof Error ? error.message : String(error), "error");
+    addTaskLog("资源预热失败", error instanceof Error ? error.message : String(error), "error");
   }
 }
 
 async function syncAfterLoginSuccess() {
   await loadCourses().catch(() => undefined);
   await warmResourceBootstrapCache();
-  addTaskLog("鐧诲綍瀹屾垚", "宸茶嚜鍔ㄨ鍙栧洖鏀捐绋嬶紝骞跺悓姝ヨ祫婧愰〉缂撳瓨銆?");
+  addTaskLog("登录完成", "已自动读取回放课程，并同步资源页缓存。");
 }
 
 async function refreshLoginStatus(preservePending = false): Promise<boolean> {
@@ -212,6 +214,7 @@ async function refreshLoginStatus(preservePending = false): Promise<boolean> {
       profile: profile.value,
       channel: channel.value,
     });
+    applyAuthIdentity(data);
     if (!data.authenticated && preservePending && loginTaskId.value) {
       setLoginStatus("登录中");
       return false;
@@ -220,12 +223,13 @@ async function refreshLoginStatus(preservePending = false): Promise<boolean> {
     return data.authenticated;
   } catch (error) {
     if (preservePending && loginTaskId.value && error instanceof ApiError && error.code === "missing_auth_state") {
-      setLoginStatus("鐧诲綍涓?");
+      setLoginStatus("登录中");
       return false;
     }
     setLoginStatus(authErrorLabel(error));
     if (error instanceof ApiError && (error.code === "missing_auth_state" || error.code === "expired_auth_state")) {
       loginBootstrapLoaded = false;
+      loginUserName.value = "";
       clearAuthBoundData();
     }
     return false;
@@ -289,9 +293,10 @@ async function logout() {
     });
     loginTaskId.value = "";
     loginBootstrapLoaded = false;
+    loginUserName.value = "";
     clearAuthBoundData();
     setLoginStatus("未找到登录态");
-    addTaskLog("已退出登录", `已清除 ${profile.value} 的本地登录态。`);
+    addTaskLog("已退出登录", "已清除本地登录态。");
   } finally {
     loggingOut.value = false;
   }
@@ -422,7 +427,6 @@ async function startDownload() {
 async function restartBackend() {
   if (restartingBackend.value) return;
   restartingBackend.value = true;
-  showLoginPanel.value = false;
   showSettingsPanel.value = false;
   persistPageCache();
   eventSource.value?.close();
@@ -443,6 +447,7 @@ function attachTask(task: TaskRecord, onDone: ((task: TaskRecord) => void | Prom
   eventSource.value?.close();
   activeTask.value = task;
   taskLogs.value = [];
+  showTaskDrawer.value = true;
   rawLogCount.value = 0;
   addTaskLog("任务已创建", `${taskName(task.kind)} 已提交。`);
 
@@ -522,191 +527,161 @@ void initializePage();
 </script>
 
 <template>
-  <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <div class="top-actions">
-          <nav class="nav-links" aria-label="页面导航">
-            <a class="btn" href="/">课程资源</a>
-            <a class="btn primary" href="/replay">课程回放</a>
-          </nav>
-          <div class="menu-group">
-            <button class="btn" type="button" @click="toggleLoginPanel">
-              {{ loginStatus.startsWith("已登录") ? "已登录" : "登录" }}
-            </button>
-            <button class="btn" type="button" @click="toggleSettingsPanel">全局参数</button>
+  <div class="workbench-shell">
+    <FixedHeaderControls
+      active-page="replay"
+      :login-status="loginStatus"
+      :checking="checkingAuthStatus"
+      :logging-out="loggingOut"
+      :settings-open="showSettingsPanel"
+      @login="startManualLogin"
+      @check="ensureAuthenticatedData"
+      @release="releaseLogin"
+      @logout="logout"
+      @settings="toggleSettingsPanel"
+    />
 
-            <section v-if="showLoginPanel" class="floating-panel top-panel login-panel">
-              <div class="section-head">
-                <h2 class="eyebrow">登录</h2>
-                <span class="status-pill">{{ loginStatus }}</span>
-              </div>
-              <div class="button-row login-actions">
-                <button class="btn primary" type="button" @click="startManualLogin">打开登录</button>
-                <button class="btn" type="button" @click="releaseLogin">释放窗口</button>
-                <button class="btn" type="button" :disabled="checkingAuthStatus" @click="() => ensureAuthenticatedData()">
-                  {{ checkingAuthStatus ? "检查中" : "检查状态" }}
-                </button>
-                <button class="btn" type="button" :disabled="loggingOut" @click="logout">
-                  {{ loggingOut ? "退出中" : "退出登录" }}
-                </button>
-              </div>
-            </section>
-
-            <section v-if="showSettingsPanel" class="floating-panel top-panel wide">
-              <h2 class="eyebrow" style="margin-bottom: 1rem">全局参数</h2>
-              <label class="field">
-                <span>Profile</span>
-                <input v-model.trim="profile" name="profile" autocomplete="off" />
-              </label>
-              <div class="field-grid">
-                <label class="field">
-                  <span>浏览器</span>
-                  <select v-model="channel" name="channel">
-                    <option value="auto">auto</option>
-                    <option value="msedge">Edge</option>
-                    <option value="chrome">Chrome</option>
-                    <option value="chromium">Chromium</option>
-                  </select>
-                </label>
-                <label class="field">
-                  <span>文件命名</span>
-                  <select v-model="downloadForm.name_mode" name="name_mode">
-                    <option value="date">课程 + 月日 + 当天第几节</option>
-                    <option value="course_order">课程 + 课程第几节 + 当天第几节</option>
-                  </select>
-                </label>
-              </div>
-              <NumberField v-model="downloadForm.concurrency" label="下载并发" :max="16" />
-              <label class="field">
-                <span>输出目录</span>
-                <input v-model.trim="downloadForm.out" name="out" autocomplete="off" />
-              </label>
-              <div class="button-row">
-                <button class="btn" type="button" :disabled="restartingBackend || isRunning" @click="restartBackend">
-                  {{ restartingBackend ? "重启中" : "重启后端" }}
-                </button>
-              </div>
-              <p class="panel-note">重启会保存最近缓存，并在服务恢复后自动刷新页面。</p>
-            </section>
-          </div>
+    <main id="main" class="workbench-main">
+      <header class="workbench-toolbar">
+        <div>
+          <p class="eyebrow">回放</p>
+          <h1>课堂回放</h1>
         </div>
-        <h1>西电课程回放解析</h1>
-        <p>{{ statusText }}</p>
-      </div>
-      <nav class="nav-links" aria-label="状态">
-        <span class="status-pill">{{ loginStatus }}</span>
-      </nav>
-    </header>
+        <div class="toolbar-controls">
+          <select v-model="selectedSemester" name="semester" @change="loadCourses">
+            <option value="">当前学期</option>
+            <option v-for="semester in semesters" :key="semester.value" :value="semester.value">{{ semester.label }}</option>
+          </select>
+          <button class="btn primary" type="button" :disabled="loadingCourses" @click="loadCourses">
+            {{ loadingCourses ? "读取中" : "读取" }}
+          </button>
+        </div>
+      </header>
 
-    <main id="main" class="page-grid">
-      <section class="content-stack">
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">1</span>
-              <h2>学期</h2>
-            </div>
-            <button class="btn primary" type="button" :disabled="loadingCourses" @click="loadCourses">
-              {{ loadingCourses ? "读取中..." : "读取" }}
-            </button>
+      <section class="workbench-board">
+        <section class="course-browser" aria-label="课程列表">
+          <div class="pane-heading">
+            <strong>课程</strong>
+            <span>{{ filteredCourses.length }} / {{ courses.length }}</span>
           </div>
-          <label class="field" style="margin-bottom: 0">
-            <span>选择学期</span>
-            <select v-model="selectedSemester" name="semester" @change="loadCourses">
-              <option value="">当前学期</option>
-              <option v-for="semester in semesters" :key="semester.value" :value="semester.value">{{ semester.label }}</option>
-            </select>
+          <label class="search-line">
+            <span class="visually-hidden">搜索课程</span>
+            <input v-model.trim="courseSearch" name="replay_course_search" placeholder="搜索课程、老师或课号" autocomplete="off" />
           </label>
-        </section>
-
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">2</span>
-              <h2>课程</h2>
-            </div>
-            <span class="empty">{{ filteredCourses.length }} / {{ courses.length }} 门</span>
-          </div>
-          <label class="field">
-            <span>搜索课程</span>
-            <input v-model.trim="courseSearch" name="replay_course_search" placeholder="课程名、老师或课号" autocomplete="off" />
-          </label>
-          <div class="course-grid">
+          <div class="plain-list">
             <button
               v-for="course in filteredCourses"
               :key="courseKey(course)"
-              class="list-button panel"
+              class="plain-row"
               :class="{ active: selectedCourse && courseKey(selectedCourse) === courseKey(course) }"
               type="button"
               @click="selectCourse(course)"
             >
-              <span class="item-name">{{ course.course_name }}</span>
-              <span class="item-meta">{{ course.course_code || "无课程号" }} / {{ course.teacher || "未知教师" }} / {{ course.clazz_name || "未知班级" }}</span>
-              <span class="item-meta">共 {{ course.live_count }} 课时，可回放 {{ course.replay_count }} 课时</span>
+              <strong>{{ course.course_name }}</strong>
+              <span>{{ course.course_code || "无课程号" }} / {{ course.teacher || "未知教师" }}</span>
+              <small>{{ course.replay_count }} / {{ course.live_count }} 课时可回放</small>
             </button>
-            <div v-if="courses.length === 0" class="empty">读取后显示课程。</div>
-            <div v-else-if="filteredCourses.length === 0" class="empty">没有匹配的课程。</div>
+            <div v-if="courses.length === 0" class="empty-line">读取后显示课程。</div>
+            <div v-else-if="filteredCourses.length === 0" class="empty-line">没有匹配的课程。</div>
           </div>
         </section>
 
-        <section class="panel pad">
-          <div class="section-head">
-            <div class="section-title">
-              <span class="step">3</span>
-              <div>
-                <h2>课时与画面</h2>
-                <p>{{ selectedCourse ? selectedCourse.course_name : "先选择课程" }}</p>
-              </div>
+        <section class="content-pane" aria-label="当前课程">
+          <div class="detail-title">
+            <div>
+              <span>{{ statusText }}</span>
+              <h2>{{ selectedCourseTitle }}</h2>
             </div>
-            <div class="button-row">
-              <a class="btn" href="/sync-guide" target="_blank" rel="noreferrer">如何同步课件与课堂</a>
+            <div class="detail-actions">
+              <a class="btn" href="/sync-guide" target="_blank" rel="noreferrer">同步说明</a>
               <button class="btn" type="button" :disabled="resources.length === 0" @click="toggleResources(true)">全选</button>
               <button class="btn" type="button" :disabled="selectedResourceUrls.length === 0" @click="toggleResources(false)">清空</button>
-              <button class="btn primary" type="button" :disabled="selectedResources.length === 0" @click="startDownload">下载选中</button>
+              <button class="btn primary" type="button" :disabled="selectedResources.length === 0" @click="startDownload">下载</button>
             </div>
           </div>
 
-          <div class="session-list">
-            <div v-for="session in sessions" :key="session.id" class="session-block">
-              <div class="session-title">
-                <div>
-                  <strong>周{{ session.week_day }} 第{{ session.jie }}节</strong>
-                  <small>{{ session.start_time }} - {{ session.end_time }}</small>
-                </div>
-                <span class="status-pill">{{ session.status_label }}</span>
+          <section class="session-flow" aria-label="课时">
+            <div v-for="session in sessions" :key="session.id" class="session-row">
+              <div class="session-time">
+                <strong>{{ sessionDateLabel(session) }}</strong>
+                <span>周{{ session.week_day }} 第{{ session.jie }}节</span>
               </div>
-              <div class="check-grid" style="max-height: none">
-                <label v-for="resource in resourcesForSession(session.id)" :key="resource.url" class="check-card">
+              <div class="session-files">
+                <div class="session-meta">
+                  <strong>{{ session.start_time }} - {{ session.end_time }}</strong>
+                  <span>{{ session.status_label }}</span>
+                </div>
+                <label v-for="resource in resourcesForSession(session.id)" :key="resource.url" class="file-row">
                   <input v-model="selectedResourceUrls" :value="resource.url" type="checkbox" />
-                  <span class="check-card-text">
+                  <span>
                     <strong>{{ resource.label || resource.attachment_name }}</strong>
                     <small>MP4</small>
                   </span>
                 </label>
-                <div v-if="resourcesForSession(session.id).length === 0" class="empty">暂无画面资源</div>
+                <div v-if="resourcesForSession(session.id).length === 0" class="empty-line">暂无画面资源</div>
               </div>
             </div>
-            <div v-if="sessions.length === 0" class="empty" style="padding: 0.8rem">选择课程后显示所有可回放课时。</div>
-          </div>
-        </section>
-
-        <section class="panel task-panel">
-          <div class="pad">
-            <div class="section-head">
-              <div class="section-title">
-                <span class="step">4</span>
-                <div>
-                  <h2>任务日志</h2>
-                  <p>{{ taskSummary }}</p>
-                </div>
-              </div>
-              <button class="btn" type="button" :disabled="!activeTask || !isRunning" @click="cancelActiveTask">取消</button>
-            </div>
-            <TaskLog :logs="taskLogs" />
-          </div>
+            <div v-if="sessions.length === 0" class="empty-line">选择课程后显示课时。</div>
+          </section>
         </section>
       </section>
     </main>
+
+    <aside v-if="showSettingsPanel" class="workspace-drawer">
+      <div class="drawer-title">
+        <strong>参数</strong>
+        <button type="button" @click="toggleSettingsPanel">关闭</button>
+      </div>
+      <label class="field">
+        <span>Profile</span>
+        <input v-model.trim="profile" name="profile" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>浏览器</span>
+        <select v-model="channel" name="channel">
+          <option value="auto">auto</option>
+          <option value="msedge">Edge</option>
+          <option value="chrome">Chrome</option>
+          <option value="chromium">Chromium</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>文件命名</span>
+        <select v-model="downloadForm.name_mode" name="name_mode">
+          <option value="date">课程 + 月日 + 当天第几节</option>
+          <option value="course_order">课程 + 课程第几节 + 当天第几节</option>
+        </select>
+      </label>
+      <NumberField v-model="downloadForm.concurrency" label="下载并发" :max="16" />
+      <label class="field">
+        <span>输出目录</span>
+        <input v-model.trim="downloadForm.out" name="out" autocomplete="off" />
+      </label>
+      <button class="btn" type="button" :disabled="restartingBackend || isRunning" @click="restartBackend">
+        {{ restartingBackend ? "重启中" : "重启后端" }}
+      </button>
+    </aside>
+
+    <footer class="download-rail">
+      <div>
+        <strong>已选 {{ selectedResources.length }} 个画面</strong>
+        <span>{{ taskSummary }}</span>
+      </div>
+      <div class="download-actions">
+        <button class="btn" type="button" @click="showTaskDrawer = !showTaskDrawer">日志</button>
+        <button class="btn" type="button" :disabled="resources.length === 0" @click="toggleResources(true)">全选</button>
+        <button class="btn" type="button" :disabled="selectedResourceUrls.length === 0" @click="toggleResources(false)">清空</button>
+        <button class="btn primary" type="button" :disabled="selectedResources.length === 0" @click="startDownload">下载</button>
+      </div>
+    </footer>
+
+    <section v-if="showTaskDrawer" class="task-drawer">
+      <div class="drawer-title">
+        <strong>任务日志</strong>
+        <button type="button" @click="showTaskDrawer = false">收起</button>
+      </div>
+      <button class="btn" type="button" :disabled="!activeTask || !isRunning" @click="cancelActiveTask">取消任务</button>
+      <TaskLog :logs="taskLogs" />
+    </section>
   </div>
 </template>

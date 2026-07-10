@@ -11,6 +11,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: resolve(__dirname, "index.html"),
+        resources: resolve(__dirname, "resources.html"),
         replay: resolve(__dirname, "replay.html"),
         syncGuide: resolve(__dirname, "sync-guide.html"),
       },
